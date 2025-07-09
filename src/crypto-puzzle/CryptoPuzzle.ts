@@ -18,7 +18,9 @@ import {
   crypto_secretbox_easy,
   crypto_secretbox_open_easy,
   crypto_secretbox_NONCEBYTES,
+  crypto_secretbox_KEYBYTES,
   randombytes_buf,
+  crypto_generichash,
 } from 'libsodium-wrappers';
 
 /* MAIN */
@@ -49,7 +51,7 @@ const CryptoPuzzle = {
     const T = DURATION;
     const t = BigInt ( Math.round ( Math.max ( 1, ( S / 1000 ) ) * T ) );
 
-    // const K = await crypto_generichash ( , randombytes_buf ( 32, 'uint8array' ), null, 'uint8array' );
+    // const K = crypto_generichash ( crypto_secretbox_KEYBYTES, randombytes_buf ( 32, 'uint8array' ), null, 'uint8array' );
     const K = crypto_secretbox_keygen ( );
     const M = MESSAGE;
     const nonce = randombytes_buf ( crypto_secretbox_NONCEBYTES );

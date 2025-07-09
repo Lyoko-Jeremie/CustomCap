@@ -52,7 +52,8 @@ export class CapWidget extends HTMLElement {
         this.boundHandleReset = this.handleReset.bind(this);
     }
 
-    initialize() {
+    // MARK: TODO R-Write
+    async initialize() {
         // MARK: TODO R-Write
         this.#workerUrl = URL.createObjectURL(
             // _MARK: worker injection
@@ -103,13 +104,13 @@ export class CapWidget extends HTMLElement {
     /**
      * init function ?
      */
+    // MARK: TODO Change
     async connectedCallback() {
         this.#host = this;
         this.#shadow = this.attachShadow({mode: "open"});
         this.#div = document.createElement("div");
         this.createUI();
         this.addEventListeners();
-        // MARK: TODO R-Write
         await this.initialize();
         this.#div.removeAttribute("disabled");
 
@@ -121,6 +122,7 @@ export class CapWidget extends HTMLElement {
         this.#host.innerHTML = `<input type="hidden" name="${fieldName}">`;
     }
 
+    // MARK: TODO Change
     async solve() {
         if (this.#solving) {
             return;
@@ -258,8 +260,8 @@ export class CapWidget extends HTMLElement {
         }
     }
 
+    // MARK: TODO R-Write
     async solveChallenges(challenge) {
-        // MARK: TODO R-Write
         const total = challenge.length;
         let completed = 0;
 
@@ -348,8 +350,8 @@ export class CapWidget extends HTMLElement {
         return results;
     }
 
+    // MARK: TODO R-Write
     setWorkersCount(workers: string | number) {
-        // MARK: TODO R-Write
         const parsedWorkers = typeof workers === 'string' ? parseInt(workers, 10) : workers;
         const maxWorkers = Math.min(navigator.hardwareConcurrency || 8, 16);
         this.#workersCount =
@@ -549,7 +551,7 @@ export class CapWidget extends HTMLElement {
 }
 
 // MARK: Invisible
-export class Cap {
+class Cap {
     widget: CapWidget;
 
     solve: CallableFunction;

@@ -53,16 +53,17 @@ if (typeof window !== 'undefined') {
 
 } else {
     // Node.js环境
-    testPoWPuzzle().catch(console.error);
+    // testPoWPuzzle().catch(console.error);
 
-    // // 测试生成速度
-    // const startTime = Date.now();
-    // const iterations = 1000; // 测试迭代次数
-    // const promises = Array.from({ length: iterations }, () => generatePoWPuzzle('Test data', 3));
-    // Promise.all(promises)
-    //     .then(() => {
-    //         const endTime = Date.now();
-    //         console.log(`✅ ${iterations} 次生成时间锁谜题耗时: ${endTime - startTime} ms`);
-    //     })
-    //     .catch(console.error);
+    // 测试生成速度
+    const startTime = Date.now();
+    const iterations = 1000; // 测试迭代次数
+    const promises = Array.from({ length: iterations }, () => generatePoWPuzzle('Test data', 20));
+    Promise.all(promises)
+        .then(() => {
+            const endTime = Date.now();
+            console.log(`✅ ${iterations} 次生成时间锁谜题耗时: ${endTime - startTime} ms`);
+            console.log(`平均每次生成耗时: ${(endTime - startTime) / iterations} ms`);
+        })
+        .catch(console.error);
 }
