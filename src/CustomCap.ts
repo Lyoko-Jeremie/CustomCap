@@ -1,21 +1,20 @@
-const capFetch = function () {
+const capFetch = function (input: RequestInfo | URL, init?: RequestInit) {
     if ((window as any)?.CAP_CUSTOM_FETCH) {
-        return (window as any).CAP_CUSTOM_FETCH(...arguments);
+        return (window as any).CAP_CUSTOM_FETCH(input, init);
     }
-    // @ts-ignore
-    return fetch(...arguments);
+    return fetch(input, init);
 };
 
 export class CapWidget extends HTMLElement {
     #workerUrl = "";
-    #resetTimer = null;
+    #resetTimer: null | ReturnType<typeof setTimeout> = null;
     #workersCount = navigator.hardwareConcurrency || 8;
     token: string | null = null;
     #shadow?: ShadowRoot;
     #div?: HTMLDivElement;
     #host?: this;
     #solving = false;
-    #eventHandlers;
+    #eventHandlers: Map<string, any> = new Map();
 
     boundHandleProgress: CallableFunction;
     boundHandleSolve: CallableFunction;
@@ -40,7 +39,6 @@ export class CapWidget extends HTMLElement {
 
     constructor() {
         super();
-        // @ts-ignore
         if (this.#eventHandlers) {
             this.#eventHandlers.forEach((handler, eventName) => {
                 this.removeEventListener(eventName.slice(2), handler);
@@ -55,8 +53,9 @@ export class CapWidget extends HTMLElement {
     }
 
     initialize() {
+        // MARK: TODO R-Write
         this.#workerUrl = URL.createObjectURL(
-            // MARK: worker injection
+            // _MARK: worker injection
             // this placeholder will be replaced with the actual worker by the build script
 
             new Blob([`%%workerScript%%`], {
@@ -101,12 +100,16 @@ export class CapWidget extends HTMLElement {
         }
     }
 
+    /**
+     * init function ?
+     */
     async connectedCallback() {
         this.#host = this;
         this.#shadow = this.attachShadow({mode: "open"});
         this.#div = document.createElement("div");
         this.createUI();
         this.addEventListeners();
+        // MARK: TODO R-Write
         await this.initialize();
         this.#div.removeAttribute("disabled");
 
@@ -153,6 +156,7 @@ export class CapWidget extends HTMLElement {
 
                 let challenges = challenge;
 
+                // MARK: TODO R-Write
                 if (!Array.isArray(challenges)) {
                     function prng(seed, length) {
                         function fnv1a(str) {
@@ -255,6 +259,7 @@ export class CapWidget extends HTMLElement {
     }
 
     async solveChallenges(challenge) {
+        // MARK: TODO R-Write
         const total = challenge.length;
         let completed = 0;
 
@@ -344,6 +349,7 @@ export class CapWidget extends HTMLElement {
     }
 
     setWorkersCount(workers: string | number) {
+        // MARK: TODO R-Write
         const parsedWorkers = typeof workers === 'string' ? parseInt(workers, 10) : workers;
         const maxWorkers = Math.min(navigator.hardwareConcurrency || 8, 16);
         this.#workersCount =
