@@ -1,9 +1,16 @@
+import {solvePoWPuzzle} from "./crypto-puzzle/TimeLockPuzzle";
+import {ready} from "libsodium-wrappers";
+
 const capFetch = function (input: RequestInfo | URL, init?: RequestInit) {
     if ((window as any)?.CAP_CUSTOM_FETCH) {
         return (window as any).CAP_CUSTOM_FETCH(input, init);
     }
     return fetch(input, init);
 };
+
+async function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export class CapWidget extends HTMLElement {
     #workerUrl = "";
@@ -52,17 +59,9 @@ export class CapWidget extends HTMLElement {
         this.boundHandleReset = this.handleReset.bind(this);
     }
 
-    // MARK: TODO R-Write
     async initialize() {
-        // MARK: TODO R-Write
-        this.#workerUrl = URL.createObjectURL(
-            // _MARK: worker injection
-            // this placeholder will be replaced with the actual worker by the build script
-
-            new Blob([`%%workerScript%%`], {
-                type: "application/javascript",
-            })
-        );
+        // init libsodium-wrappers
+        await ready;
     }
 
     attributeChangedCallback(name: string, _: any, value: string) {
@@ -104,7 +103,6 @@ export class CapWidget extends HTMLElement {
     /**
      * init function ?
      */
-    // MARK: TODO Change
     async connectedCallback() {
         this.#host = this;
         this.#shadow = this.attachShadow({mode: "open"});
@@ -122,7 +120,6 @@ export class CapWidget extends HTMLElement {
         this.#host.innerHTML = `<input type="hidden" name="${fieldName}">`;
     }
 
-    // MARK: TODO Change
     async solve() {
         if (this.#solving) {
             return;
@@ -150,67 +147,24 @@ export class CapWidget extends HTMLElement {
                 const apiEndpoint = this.getAttribute("data-cap-api-endpoint");
                 if (!apiEndpoint) throw new Error("Missing API endpoint");
 
-                const {challenge, token} = await (
-                    await capFetch(`${apiEndpoint}challenge`, {
+                const {challenge} = await (
+                    await capFetch(`${apiEndpoint}/challenge`, {
                         method: "POST",
                     })
                 ).json();
 
-                let challenges = challenge;
-
-                // MARK: TODO R-Write
-                if (!Array.isArray(challenges)) {
-                    function prng(seed, length) {
-                        function fnv1a(str) {
-                            let hash = 2166136261;
-                            for (let i = 0; i < str.length; i++) {
-                                hash ^= str.charCodeAt(i);
-                                hash +=
-                                    (hash << 1) +
-                                    (hash << 4) +
-                                    (hash << 7) +
-                                    (hash << 8) +
-                                    (hash << 24);
-                            }
-                            return hash >>> 0;
-                        }
-
-                        let state = fnv1a(seed);
-                        let result = "";
-
-                        function next() {
-                            state ^= state << 13;
-                            state ^= state >>> 17;
-                            state ^= state << 5;
-                            return state >>> 0;
-                        }
-
-                        while (result.length < length) {
-                            const rnd = next();
-                            result += rnd.toString(16).padStart(8, "0");
-                        }
-
-                        return result.substring(0, length);
-                    }
-
-                    let i = 0;
-
-                    challenges = Array.from({length: challenge.c}, () => {
-                        i = i + 1;
-
-                        return [
-                            prng(`${token}${i}`, challenge.s),
-                            prng(`${token}${i}d`, challenge.d),
-                        ];
-                    });
-                }
+                let challenges: string = challenge;
 
                 const solutions = await this.solveChallenges(challenges);
 
-                const resp = await (
+                const resp: {
+                    success: boolean;
+                    token: string;
+                    expires: string;
+                } = await (
                     await capFetch(`${apiEndpoint}redeem`, {
                         method: "POST",
-                        body: JSON.stringify({token, solutions}),
+                        body: JSON.stringify({solutions}),
                         headers: {"Content-Type": "application/json"},
                     })
                 ).json();
@@ -260,106 +214,20 @@ export class CapWidget extends HTMLElement {
         }
     }
 
-    // MARK: TODO R-Write
-    async solveChallenges(challenge) {
-        const total = challenge.length;
-        let completed = 0;
-
-        const workers = Array(this.#workersCount)
-            .fill(null)
-            .map(() => {
-                try {
-                    return new Worker(this.#workerUrl);
-                } catch (error) {
-                    console.error("[cap] Failed to create worker:", error);
-                    throw new Error("Worker creation failed");
-                }
-            });
-
-        const solveSingleChallenge = ([salt, target], workerId) =>
-            new Promise((resolve, reject) => {
-                const worker = workers[workerId];
-                if (!worker) {
-                    reject(new Error("Worker not available"));
-                    return;
-                }
-
-                const timeout = setTimeout(() => {
-                    try {
-                        worker.terminate();
-                        workers[workerId] = new Worker(this.#workerUrl);
-                    } catch (error) {
-                        console.error(
-                            "[cap] error terminating/recreating worker:",
-                            error
-                        );
-                    }
-                    reject(new Error("Worker timeout"));
-                }, 30000);
-
-                worker.onmessage = ({data}) => {
-                    if (!data.found) return;
-                    clearTimeout(timeout);
-                    completed++;
-                    this.dispatchEvent("progress", {
-                        progress: Math.round((completed / total) * 100),
-                    });
-
-                    resolve(data.nonce);
-                };
-
-                worker.onerror = (err) => {
-                    clearTimeout(timeout);
-                    this.error(`Error in worker: ${err.message || err}`);
-                    reject(err);
-                };
-
-                worker.postMessage({
-                    salt,
-                    target,
-                    wasmUrl:
-                        window.CAP_CUSTOM_WASM_URL ||
-                        `https://cdn.jsdelivr.net/npm/@cap.js/wasm@${WASM_VERSION}/browser/cap_wasm.min.js`,
+    async solveChallenges(puzzle: string) {
+        const solvedMessage = await solvePoWPuzzle(puzzle,
+            async (progress: number) => {
+                this.dispatchEvent("progress", {
+                    progress: progress,
                 });
-            });
-
-        const results = [];
-        try {
-            for (let i = 0; i < challenge.length; i += this.#workersCount) {
-                const chunk = challenge.slice(
-                    i,
-                    Math.min(i + this.#workersCount, challenge.length)
-                );
-                const chunkResults = await Promise.all(
-                    chunk.map((c, idx) => solveSingleChallenge(c, idx))
-                );
-                results.push(...chunkResults);
+                await sleep(0); // 让出事件循环，避免阻塞
             }
-        } finally {
-            workers.forEach((w) => {
-                if (w) {
-                    try {
-                        w.terminate();
-                    } catch (error) {
-                        console.error("[cap] error terminating worker:", error);
-                    }
-                }
-            });
-        }
-
-        return results;
+        );
+        return solvedMessage;
     }
 
-    // MARK: TODO R-Write
-    setWorkersCount(workers: string | number) {
-        const parsedWorkers = typeof workers === 'string' ? parseInt(workers, 10) : workers;
-        const maxWorkers = Math.min(navigator.hardwareConcurrency || 8, 16);
-        this.#workersCount =
-            !isNaN(parsedWorkers) &&
-            parsedWorkers > 0 &&
-            parsedWorkers <= maxWorkers
-                ? parsedWorkers
-                : navigator.hardwareConcurrency || 8;
+    setWorkersCount(workers: number) {
+        // empty
     }
 
     createUI() {
@@ -550,7 +418,6 @@ export class CapWidget extends HTMLElement {
     }
 }
 
-// MARK: Invisible
 class Cap {
     widget: CapWidget;
 
