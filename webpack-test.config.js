@@ -6,7 +6,7 @@ const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
 module.exports = {
     entry: {
-        'testTimeLock': './test/test.ts',
+        'test': './test/test.ts',
     },
     mode: 'development',
     devtool: 'inline-source-map',

@@ -2,6 +2,7 @@ import {solvePoWPuzzle} from "./crypto-puzzle/TimeLockPuzzle";
 import {ready} from "libsodium-wrappers";
 
 const capFetch = function (input: RequestInfo | URL, init?: RequestInit) {
+    console.log('CAP_CUSTOM_FETCH', (window as any)?.CAP_CUSTOM_FETCH);
     if ((window as any)?.CAP_CUSTOM_FETCH) {
         return (window as any).CAP_CUSTOM_FETCH(input, init);
     }
@@ -29,7 +30,16 @@ export class CapWidget extends HTMLElement {
     boundHandleReset: CallableFunction;
 
     getI18nText(key: string, defaultValue: string): string {
-        return this.getAttribute(`data-cap-i18n-${key}`) || defaultValue;
+        const r = this.getAttribute(`data-cap-i18n-${key}`) ?? defaultValue;
+        console.log('getI18nText', key, this.getAttribute(`data-cap-i18n-${key}`), r);
+        return r;
+    }
+
+    hasI18nText(key: string): boolean {
+        console.log('hasI18nText', key, this.getAttribute(`data-cap-i18n-${key}`));
+        const r = !!this.getAttribute(`data-cap-i18n-${key}`);
+        console.log('hasI18nText', key, this.getAttribute(`data-cap-i18n-${key}`), r);
+        return r;
     }
 
     static get observedAttributes() {
@@ -147,9 +157,11 @@ export class CapWidget extends HTMLElement {
                 const apiEndpoint = this.getAttribute("data-cap-api-endpoint");
                 if (!apiEndpoint) throw new Error("Missing API endpoint");
 
+                const t1 = Date.now();
+
                 const {challenge} = await (
                     await capFetch(`${apiEndpoint}/challenge`, {
-                        method: "POST",
+                        method: "GET",
                     })
                 ).json();
 
@@ -162,7 +174,7 @@ export class CapWidget extends HTMLElement {
                     token: string;
                     expires: string;
                 } = await (
-                    await capFetch(`${apiEndpoint}redeem`, {
+                    await capFetch(`${apiEndpoint}/redeem`, {
                         method: "POST",
                         body: JSON.stringify({solutions}),
                         headers: {"Content-Type": "application/json"},
@@ -178,7 +190,10 @@ export class CapWidget extends HTMLElement {
                     (this.querySelector(`input[name='${fieldName}']`) as any)!.value = resp.token;
                 }
 
-                this.dispatchEvent("solve", {token: resp.token});
+                const t2 = Date.now();
+                const usedTime = t2 - t1;
+
+                this.dispatchEvent("solve", {token: resp.token, usedTime: usedTime});
                 this.token = resp.token;
 
                 if (this.#resetTimer) clearTimeout(this.#resetTimer);
@@ -252,10 +267,114 @@ export class CapWidget extends HTMLElement {
         this.#div.innerHTML = `<div class="checkbox" part="checkbox"></div><p part="label">${this.getI18nText(
             "initial-state",
             "I'm a human"
-        )}</p>`;
+        )}</p><a part="attribution" class="credits" ${
+            this.hasI18nText('no-credits-link') ? '' :
+                `href="${this.getI18nText(
+                    "credits-link",
+                    'https://people.csail.mit.edu/rivest/pubs/RSW96.pdf'
+                )}"`
+        } target="_blank" rel="follow noopener">PoW Verify</a>`;
+        // this.#div.innerHTML = `
+        // <div class="checkbox" part="checkbox"></div>
+        // <p part="label">${this.getI18nText(
+        //     "initial-state",
+        //     "I'm a human"
+        // )}</p>`;
 
-        this.#shadow!.innerHTML = `<style>.captcha,.captcha * {box-sizing:border-box;}.captcha{background-color:var(--cap-background,#fdfdfd);border:1px solid var(--cap-border-color,#dddddd8f);border-radius:var(--cap-border-radius,14px);user-select:none;height:var(--cap-widget-height, 58px);width:var(--cap-widget-width, 230px);display:flex;align-items:center;padding:var(--cap-widget-padding,14px);gap:var(--cap-gap,15px);cursor:pointer;transition:filter .2s,transform .2s;position:relative;-webkit-tap-highlight-color:rgba(255,255,255,0);overflow:hidden;color:var(--cap-color,#212121)}.captcha:hover{filter:brightness(98%)}.checkbox{width:var(--cap-checkbox-size,25px);height:var(--cap-checkbox-size,25px);border:var(--cap-checkbox-border,1px solid #aaaaaad1);border-radius:var(--cap-checkbox-border-radius,6px);background-color:var(--cap-checkbox-background,#fafafa91);transition:opacity .2s;margin-top:var(--cap-checkbox-margin,2px);margin-bottom:var(--cap-checkbox-margin,2px)}.captcha *{font-family:var(--cap-font,system,-apple-system,"BlinkMacSystemFont",".SFNSText-Regular","San Francisco","Roboto","Segoe UI","Helvetica Neue","Lucida Grande","Ubuntu","arial",sans-serif)}.captcha p{margin:0;font-weight:500;font-size:15px;user-select:none;transition:opacity .2s}.captcha[data-state=verifying]
-.checkbox{background: none;display:flex;align-items:center;justify-content:center;transform: scale(1.1);border: none;border-radius: 50%;background: conic-gradient(var(--cap-spinner-color,#000) 0%, var(--cap-spinner-color,#000) var(--progress, 0%), var(--cap-spinner-background-color,#eee) var(--progress, 0%), var(--cap-spinner-background-color,#eee) 100%);position: relative;}.captcha[data-state=verifying] .checkbox::after {content: "";background-color: var(--cap-background,#fdfdfd);width: calc(100% - var(--cap-spinner-thickness,5px));height: calc(100% - var(--cap-spinner-thickness,5px));border-radius: 50%;margin:calc(var(--cap-spinner-thickness,5px) / 2)}.captcha[data-state=done] .checkbox{border:1px solid transparent;background-image:var(--cap-checkmark,url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cstyle%3E%40keyframes%20anim%7B0%25%7Bstroke-dashoffset%3A23.21320343017578px%7Dto%7Bstroke-dashoffset%3A0%7D%7D%3C%2Fstyle%3E%3Cpath%20fill%3D%22none%22%20stroke%3D%22%2300a67d%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m5%2012%205%205L20%207%22%20style%3D%22stroke-dashoffset%3A0%3Bstroke-dasharray%3A23.21320343017578px%3Banimation%3Aanim%20.5s%20ease%22%2F%3E%3C%2Fsvg%3E"));background-size:cover}.captcha[data-state=error] .checkbox{border:1px solid transparent;background-image:var(--cap-error-cross,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 24 24'%3E%3Cpath fill='%23f55b50' d='M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 18a8 8 0 0 1-8-8a8 8 0 0 1 8-8a8 8 0 0 1 8 8a8 8 0 0 1-8 8'/%3E%3C/svg%3E"));background-size:cover}.captcha[disabled]{cursor:not-allowed}.captcha[disabled][data-state=verifying]{cursor:progress}.captcha[disabled][data-state=done]{cursor:default}.captcha .credits{position:absolute;bottom:10px;right:10px;font-size:var(--cap-credits-font-size,12px);color:var(--cap-color,#212121);opacity:var(--cap-opacity-hover,0.8);text-underline-offset: 1.5px;}</style>`;
+        this.#shadow!.innerHTML = `
+<style>
+.captcha,.captcha * {
+    box-sizing:border-box;
+}
+.captcha{
+    background-color:var(--cap-background,#fdfdfd);
+    border:1px solid var(--cap-border-color,#dddddd8f);
+    border-radius:var(--cap-border-radius,14px);
+    user-select:none;
+    height:var(--cap-widget-height, 58px);
+    width:var(--cap-widget-width, 250px);
+    display:flex;
+    align-items:center;
+    padding:var(--cap-widget-padding,14px);
+    gap:var(--cap-gap,15px);
+    cursor:pointer;
+    transition:filter .2s,transform .2s;
+    position:relative;
+    -webkit-tap-highlight-color:rgba(255,255,255,0);
+    overflow:hidden;
+    color:var(--cap-color,#212121)
+}
+.captcha:hover{
+    filter:brightness(98%)
+}
+.checkbox{
+    width:var(--cap-checkbox-size,25px);
+    height:var(--cap-checkbox-size,25px);
+    border:var(--cap-checkbox-border,1px solid #aaaaaad1);
+    border-radius:var(--cap-checkbox-border-radius,6px);
+    background-color:var(--cap-checkbox-background,#fafafa91);
+    transition:opacity .2s;
+    margin-top:var(--cap-checkbox-margin,2px);
+    margin-bottom:var(--cap-checkbox-margin,2px)
+ }
+.captcha *{
+    font-family:var(--cap-font,system,-apple-system,"BlinkMacSystemFont",".SFNSText-Regular","San Francisco","Roboto","Segoe UI","Helvetica Neue","Lucida Grande","Ubuntu","arial",sans-serif)
+}
+.captcha p{
+    margin:0;
+    font-weight:500;
+    font-size:15px;
+    user-select:none;
+    transition:opacity .2s
+}
+.captcha[data-state=verifying] .checkbox{
+    background: none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform: scale(1.1);
+    border: none;
+    border-radius: 50%;
+    background: conic-gradient(var(--cap-spinner-color,#000) 0%, var(--cap-spinner-color,#000) var(--progress, 0%), var(--cap-spinner-background-color,#eee) var(--progress, 0%), var(--cap-spinner-background-color,#eee) 100%);
+    position: relative;
+}
+.captcha[data-state=verifying] .checkbox::after {
+    content: "";
+    background-color: var(--cap-background,#fdfdfd);
+    width: calc(100% - var(--cap-spinner-thickness,5px));
+    height: calc(100% - var(--cap-spinner-thickness,5px));
+    border-radius: 50%;
+    margin:calc(var(--cap-spinner-thickness,5px) / 2)
+}
+.captcha[data-state=done] .checkbox{
+    border:1px solid transparent;
+    background-image:var(--cap-checkmark,url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cstyle%3E%40keyframes%20anim%7B0%25%7Bstroke-dashoffset%3A23.21320343017578px%7Dto%7Bstroke-dashoffset%3A0%7D%7D%3C%2Fstyle%3E%3Cpath%20fill%3D%22none%22%20stroke%3D%22%2300a67d%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m5%2012%205%205L20%207%22%20style%3D%22stroke-dashoffset%3A0%3Bstroke-dasharray%3A23.21320343017578px%3Banimation%3Aanim%20.5s%20ease%22%2F%3E%3C%2Fsvg%3E"));
+    background-size:cover
+}
+.captcha[data-state=error] .checkbox{
+    border:1px solid transparent;
+    background-image:var(--cap-error-cross,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 24 24'%3E%3Cpath fill='%23f55b50' d='M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 18a8 8 0 0 1-8-8a8 8 0 0 1 8-8a8 8 0 0 1 8 8a8 8 0 0 1-8 8'/%3E%3C/svg%3E"));
+    background-size:cover
+}
+.captcha[disabled]{
+    cursor:not-allowed
+}
+.captcha[disabled][data-state=verifying]{
+    cursor:progress
+}.captcha[disabled][data-state=done]{
+    cursor:default
+}
+.captcha .credits{
+    position:absolute;
+    bottom:5px;
+    right:10px;
+    font-size:var(--cap-credits-font-size,12px);
+    color:var(--cap-color,#212121);
+    opacity:var(--cap-opacity-hover,0.8);
+    text-underline-offset: 1.5px;
+}
+</style>`;
+
 
         this.#shadow!.appendChild(this.#div);
     }
@@ -324,9 +443,17 @@ export class CapWidget extends HTMLElement {
     }
 
     handleSolve(event: any) {
+        console.log('event', event);
+        console.log('usedTime', event.detail.usedTime);
+        let usedTime = event.detail.usedTime || 0;
+        let usedTimeS = '';
+        if (usedTime > 0) {
+            usedTime = (usedTime / 1000).toFixed(1);
+            usedTimeS = ` (${usedTime}s)`;
+        }
         this.updateUI(
             "done",
-            this.getI18nText("solved-label", "You're a human"),
+            this.getI18nText("solved-label", "You're a human") + `${usedTimeS}`,
             true
         );
         this.executeAttributeCode("onsolve", event);
