@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Lock Puzzle Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-info {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007acc;
+        }
+        .console-output {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            min-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Time Lock Puzzle Test</h1>
+        
+        <div class="test-info">
+            <h3>测试说明</h3>
+            <p>这个测试演示了工作量证明（PoW）时间锁谜题的生成和解决过程。</p>
+            <p>难度级别：3，预计解决时间：约 3 秒</p>
+        </div>
+
+        <div class="console-output" id="console">
+            <div class="loading">正在加载时间锁谜题库...</div>
+        </div>
+    </div>
+
+    <script>
+        // 重写console.log以显示在页面上
+        const consoleElement = document.getElementById('console');
+        consoleElement.innerHTML = '';
+
+        function appendLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.createElement('div');
+            logElement.className = type;
+            logElement.textContent = `[${timestamp}] ${message}`;
+            consoleElement.appendChild(logElement);
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        }
+
+        // 重写console方法
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+
+        console.log = function(...args) {
+            const message = args.join(' ');
+            appendLog(message, 'info');
+            originalConsoleLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            const message = args.join(' ');
+            appendLog(message, 'error');
+            originalConsoleError.apply(console, args);
+        };
+
+        // 添加成功日志样式
+        window.logSuccess = function(message) {
+            appendLog(message, 'success');
+        };
+
+        console.log('页面已加载，开始执行时间锁谜题测试...');
+    </script>
+</body>
+</html>
