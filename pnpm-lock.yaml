@@ -41,9 +41,6 @@ importers:
       moment:
         specifier: ^2.30.1
         version: 2.30.1
-      svg-captcha:
-        specifier: ^1.4.0
-        version: 1.4.0
       ts-loader:
         specifier: ^9.5.2
         version: 9.5.2(typescript@5.8.3)(webpack@5.100.0(webpack-cli@6.0.1))
@@ -1321,10 +1318,6 @@ packages:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
     hasBin: true
 
-  opentype.js@0.7.3:
-    resolution: {integrity: sha512-Veui5vl2bLonFJ/SjX/WRWJT3SncgiZNnKUyahmXCc2sa1xXW15u3R/3TN5+JFiP7RsjK5ER4HA5eWaEmV9deA==}
-    hasBin: true
-
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
     engines: {node: '>=6'}
@@ -1626,10 +1619,6 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  svg-captcha@1.4.0:
-    resolution: {integrity: sha512-/fkkhavXPE57zRRCjNqAP3txRCSncpMx3NnNZL7iEoyAtYwUjPhJxW6FQTQPG5UPEmCrbFoXS10C3YdJlW7PDg==}
-    engines: {node: '>=4.x'}
-
   tapable@2.2.2:
     resolution: {integrity: sha512-Re10+NauLTMCudc7T5WLFLAwDhQ0JWdrMK+9B2M8zR5hRExKmsRDCBA7/aV/pNJFltmBFO5BAMlQFi/vq3nKOg==}
     engines: {node: '>=6'}
@@ -1663,9 +1652,6 @@ packages:
 
   thunky@1.1.0:
     resolution: {integrity: sha512-eHY7nBftgThBqOyHGVN+l8gF0BucP09fMo0oO/Lb0w1OF80dJv+lDVpXG60WMQvkcxAkNybKsrEIE3ZtKGmPrA==}
-
-  tiny-inflate@1.0.3:
-    resolution: {integrity: sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==}
 
   tiny-webcrypto@1.0.3:
     resolution: {integrity: sha512-LQQdNMAgz9BXNT2SKbYh3eCb+fLV0p7JB7MwUjzY6IOlQLGIadfnFqRpshERsS5Dl2OM/hs0+4I/XmSrF+RBbw==}
@@ -3067,10 +3053,6 @@ snapshots:
 
   opener@1.5.2: {}
 
-  opentype.js@0.7.3:
-    dependencies:
-      tiny-inflate: 1.0.3
-
   p-limit@2.3.0:
     dependencies:
       p-try: 2.2.0
@@ -3411,10 +3393,6 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  svg-captcha@1.4.0:
-    dependencies:
-      opentype.js: 0.7.3
-
   tapable@2.2.2: {}
 
   terser-webpack-plugin@5.3.14(webpack@5.100.0(webpack-cli@6.0.1)):
@@ -3438,8 +3416,6 @@ snapshots:
       tslib: 2.8.1
 
   thunky@1.1.0: {}
-
-  tiny-inflate@1.0.3: {}
 
   tiny-webcrypto@1.0.3: {}
 
