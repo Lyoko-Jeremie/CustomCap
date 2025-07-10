@@ -294,8 +294,8 @@ export class CapWidget extends HTMLElement {
     border:1px solid var(--cap-border-color,#dddddd8f);
     border-radius:var(--cap-border-radius,14px);
     user-select:none;
-    height:var(--cap-widget-height, 58px);
-    width:var(--cap-widget-width, 250px);
+    height:var(--cap-widget-height, 4em);
+    width:var(--cap-widget-width, 15em);
     display:flex;
     align-items:center;
     padding:var(--cap-widget-padding,14px);
@@ -370,9 +370,9 @@ export class CapWidget extends HTMLElement {
 .captcha .credits{
     position:absolute;
     bottom:5px;
-    right:10px;
+    right:5px;
     font-size:var(--cap-credits-font-size,12px);
-    color:var(--cap-color,#212121);
+    color:var(--cap-color,#dadada);
     opacity:var(--cap-opacity-hover,0.8);
     text-underline-offset: 1.5px;
 }
@@ -392,7 +392,7 @@ export class CapWidget extends HTMLElement {
         // });
 
         this.#div.addEventListener("click", () => {
-            if (!this.#div!.hasAttribute("disabled")) this.solve();
+            if (!this.#div!.hasAttribute("disabled")) this.solve().catch(console.error);
         });
 
         this.#div.addEventListener("keydown", (e: any) => {
