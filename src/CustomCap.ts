@@ -236,6 +236,9 @@ export class CapWidget extends HTMLElement {
                     progress: progress,
                 });
                 await sleep(0); // 让出事件循环，避免阻塞
+                if (this.stopIt) {
+                    throw new Error("Solving stopped by user");
+                }
             }
         );
         return solvedMessage;
@@ -542,6 +545,12 @@ export class CapWidget extends HTMLElement {
             URL.revokeObjectURL(this.#workerUrl);
             this.#workerUrl = "";
         }
+    }
+
+    stopIt = false;
+
+    stop() {
+        this.stopIt = true;
     }
 }
 

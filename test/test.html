@@ -43,9 +43,31 @@
         data-cap-i18n-verifying-label="正在验证..."
         data-cap-i18n-initial-state="我是人类"
         data-cap-i18n-solved-label="验证通过"
-        data-cap-i18n-error-label="错误："
+        data-cap-i18n-error-label="错误"
         data-cap-i18n-no-credits-link="1"
 ></cap-widget>
+
+
+<!--<cap-widget-->
+<!--        id="cap"-->
+<!--        data-cap-api-endpoint="/api"-->
+<!--        data-cap-i18n-verifying-label="正在验证..."-->
+<!--        data-cap-i18n-initial-state="我是人类"-->
+<!--        data-cap-i18n-solved-label="验证通过"-->
+<!--        data-cap-i18n-error-label="错误"-->
+<!--        data-cap-i18n-no-credits-link="1"-->
+<!--&gt;</cap-widget>-->
+
+
+<!--<cap-widget-->
+<!--        id="cap"-->
+<!--        data-cap-api-endpoint="/api"-->
+<!--        data-cap-i18n-verifying-label="正在验证..."-->
+<!--        data-cap-i18n-initial-state="我是人类"-->
+<!--        data-cap-i18n-solved-label="验证通过"-->
+<!--        data-cap-i18n-error-label="错误"-->
+<!--        data-cap-i18n-no-credits-link="1"-->
+<!--&gt;</cap-widget>-->
 
 <!--data-cap-i18n-credits-link="https://www.qidian.com/"-->
 <script>
@@ -54,7 +76,7 @@
     // widget.solve();
 
     widget.addEventListener("solve", function (e) {
-        fetch(e.detail.token === "ok" ? "/solved" : "/failed");
+        console.log("Solve event triggered", e.detail);
     });
 </script>
 </body>
