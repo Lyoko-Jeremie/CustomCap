@@ -14,9 +14,7 @@ async function sleep(ms: number) {
 }
 
 export class CapWidget extends HTMLElement {
-    #workerUrl = "";
     #resetTimer: null | ReturnType<typeof setTimeout> = null;
-    #workersCount = navigator.hardwareConcurrency || 8;
     token: string | null = null;
     #shadow?: ShadowRoot;
     #div?: HTMLDivElement;
@@ -540,11 +538,6 @@ export class CapWidget extends HTMLElement {
         if (this.#resetTimer) {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
-        }
-
-        if (this.#workerUrl) {
-            URL.revokeObjectURL(this.#workerUrl);
-            this.#workerUrl = "";
         }
     }
 
