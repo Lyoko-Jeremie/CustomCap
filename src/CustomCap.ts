@@ -1,22 +1,12 @@
 import {solvePoWPuzzle} from "./crypto-puzzle/TimeLockPuzzle";
 import {ready} from "libsodium-wrappers";
 
-const capFetch = function (input: RequestInfo | URL, init?: RequestInit) {
-    console.log('CAP_CUSTOM_FETCH', (window as any)?.CAP_CUSTOM_FETCH);
-    if ((window as any)?.CAP_CUSTOM_FETCH) {
-        return (window as any).CAP_CUSTOM_FETCH(input, init);
-    }
-    return fetch(input, init);
-};
-
 async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export class CapWidget extends HTMLElement {
-    #workerUrl = "";
     #resetTimer: null | ReturnType<typeof setTimeout> = null;
-    #workersCount = navigator.hardwareConcurrency || 8;
     token: string | null = null;
     #shadow?: ShadowRoot;
     #div?: HTMLDivElement;
@@ -28,6 +18,23 @@ export class CapWidget extends HTMLElement {
     boundHandleSolve: CallableFunction;
     boundHandleError: CallableFunction;
     boundHandleReset: CallableFunction;
+
+    CAP_CUSTOM_FETCH?: typeof fetch;
+
+    set_CAP_CUSTOM_FETCH(fetchFn: typeof fetch) {
+        if (typeof fetchFn !== 'function') {
+            throw new Error('CAP_CUSTOM_FETCH must be a function');
+        }
+        this.CAP_CUSTOM_FETCH = fetchFn;
+    }
+
+    capFetch(input: RequestInfo | URL, init?: RequestInit) {
+        console.log('CAP_CUSTOM_FETCH', this?.CAP_CUSTOM_FETCH);
+        if (this?.CAP_CUSTOM_FETCH) {
+            return this.CAP_CUSTOM_FETCH(input, init);
+        }
+        return fetch(input, init);
+    };
 
     getI18nText(key: string, defaultValue: string): string {
         const r = this.getAttribute(`data-cap-i18n-${key}`) ?? defaultValue;
@@ -160,7 +167,7 @@ export class CapWidget extends HTMLElement {
                 const t1 = Date.now();
 
                 const {challenge} = await (
-                    await capFetch(`${apiEndpoint}/challenge`, {
+                    await this.capFetch(`${apiEndpoint}/challenge`, {
                         method: "GET",
                     })
                 ).json();
@@ -174,7 +181,7 @@ export class CapWidget extends HTMLElement {
                     token: string;
                     expires: string;
                 } = await (
-                    await capFetch(`${apiEndpoint}/redeem`, {
+                    await this.capFetch(`${apiEndpoint}/redeem`, {
                         method: "POST",
                         body: JSON.stringify({solutions}),
                         headers: {"Content-Type": "application/json"},
@@ -230,8 +237,17 @@ export class CapWidget extends HTMLElement {
     }
 
     async solveChallenges(puzzle: string) {
+        let lastShowProgressTime: number = 0;
         const solvedMessage = await solvePoWPuzzle(puzzle,
             async (progress: number) => {
+
+                const now = Date.now();
+                if (now - lastShowProgressTime < 200) {
+                    // 防止过于频繁的更新， Firefox DOM 事件循环需要更多的时间来处理
+                    return;
+                }
+                lastShowProgressTime = now;
+
                 this.dispatchEvent("progress", {
                     progress: progress,
                 });
@@ -276,7 +292,10 @@ export class CapWidget extends HTMLElement {
                     "credits-link",
                     'https://people.csail.mit.edu/rivest/pubs/RSW96.pdf'
                 )}"`
-        } target="_blank" rel="follow noopener">PoW Verify</a>`;
+        } target="_blank" rel="follow noopener">${this.getI18nText(
+            "credits-string",
+            "PoW Challenge"
+        )}</a>`;
         // this.#div.innerHTML = `
         // <div class="checkbox" part="checkbox"></div>
         // <p part="label">${this.getI18nText(
@@ -498,7 +517,13 @@ export class CapWidget extends HTMLElement {
         return super.dispatchEvent(event);
     }
 
-    reset() {
+    async reset() {
+        // stop the solving process if it's running
+        this.stopIt = true;
+        // wait for a moment to ensure the stop is effective
+        await sleep(1);
+        // reset the state
+        this.stopIt = false;
         if (this.#resetTimer) {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
@@ -539,11 +564,6 @@ export class CapWidget extends HTMLElement {
         if (this.#resetTimer) {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
-        }
-
-        if (this.#workerUrl) {
-            URL.revokeObjectURL(this.#workerUrl);
-            this.#workerUrl = "";
         }
     }
 

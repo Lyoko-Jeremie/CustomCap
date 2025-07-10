@@ -54,12 +54,27 @@
 
 <!--data-cap-i18n-credits-link="https://www.qidian.com/"-->
 <script>
-    const widget = document.querySelector("#cap");
 
-    // widget.solve();
+    customElements.whenDefined('cap-widget').then(() => {
+        const widget = document.querySelector("#cap");
+        console.log(widget);
+        console.log(window.CAP_CUSTOM_FETCH);
 
-    widget.addEventListener("solve", function (e) {
-        fetch(e.detail.token === "ok" ? "/solved" : "/failed");
+        // widget.set_CAP_CUSTOM_FETCH(window.CAP_CUSTOM_FETCH);
+        widget.CAP_CUSTOM_FETCH = window.CAP_CUSTOM_FETCH;
+        console.log(widget);
+
+        widget.addEventListener("solve", function (e) {
+            console.log("solve", e.detail);
+            console.log("token", e.detail.token);
+            console.log("usedTime", e.detail.usedTime);
+
+            setTimeout(() => {
+                widget.reset();
+            }, 3000);
+        });
+
+        // widget.solve();
     });
 </script>
 </body>
