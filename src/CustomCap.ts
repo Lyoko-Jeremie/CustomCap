@@ -1,14 +1,6 @@
 import {solvePoWPuzzle} from "./crypto-puzzle/TimeLockPuzzle";
 import {ready} from "libsodium-wrappers";
 
-const capFetch = function (input: RequestInfo | URL, init?: RequestInit) {
-    console.log('CAP_CUSTOM_FETCH', (window as any)?.CAP_CUSTOM_FETCH);
-    if ((window as any)?.CAP_CUSTOM_FETCH) {
-        return (window as any).CAP_CUSTOM_FETCH(input, init);
-    }
-    return fetch(input, init);
-};
-
 async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -26,6 +18,23 @@ export class CapWidget extends HTMLElement {
     boundHandleSolve: CallableFunction;
     boundHandleError: CallableFunction;
     boundHandleReset: CallableFunction;
+
+    CAP_CUSTOM_FETCH?: typeof fetch;
+
+    set_CAP_CUSTOM_FETCH(fetchFn: typeof fetch) {
+        if (typeof fetchFn !== 'function') {
+            throw new Error('CAP_CUSTOM_FETCH must be a function');
+        }
+        this.CAP_CUSTOM_FETCH = fetchFn;
+    }
+
+    capFetch(input: RequestInfo | URL, init?: RequestInit) {
+        console.log('CAP_CUSTOM_FETCH', this?.CAP_CUSTOM_FETCH);
+        if (this?.CAP_CUSTOM_FETCH) {
+            return this.CAP_CUSTOM_FETCH(input, init);
+        }
+        return fetch(input, init);
+    };
 
     getI18nText(key: string, defaultValue: string): string {
         const r = this.getAttribute(`data-cap-i18n-${key}`) ?? defaultValue;
@@ -158,7 +167,7 @@ export class CapWidget extends HTMLElement {
                 const t1 = Date.now();
 
                 const {challenge} = await (
-                    await capFetch(`${apiEndpoint}/challenge`, {
+                    await this.capFetch(`${apiEndpoint}/challenge`, {
                         method: "GET",
                     })
                 ).json();
@@ -172,7 +181,7 @@ export class CapWidget extends HTMLElement {
                     token: string;
                     expires: string;
                 } = await (
-                    await capFetch(`${apiEndpoint}/redeem`, {
+                    await this.capFetch(`${apiEndpoint}/redeem`, {
                         method: "POST",
                         body: JSON.stringify({solutions}),
                         headers: {"Content-Type": "application/json"},
