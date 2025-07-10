@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "=====debug=====": "",
     "test:webpack:dev:test:w": "webpack -w --mode=development -c webpack-test.config.js",
+    "test:webpack:dev:testSvgCaptcha:w": "webpack -w --mode=development -c webpack-testSvgCaptcha.config.js",
     "test:webpack:dev:testTimeLock:w": "webpack -w --mode=development -c webpack-testTimeLock.config.js",
     "test:http-server": "http-server -p 62310 -c-1 -o --cors"
   },
@@ -25,6 +26,7 @@
     "libsodium-wrappers": "^0.7.15",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",
+    "svg-captcha": "^1.4.0",
     "ts-loader": "^9.5.2",
     "uint8-concat": "^1.0.1"
   },
