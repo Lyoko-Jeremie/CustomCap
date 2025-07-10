@@ -499,6 +499,7 @@ export class CapWidget extends HTMLElement {
     }
 
     reset() {
+        this.stop();
         if (this.#resetTimer) {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
