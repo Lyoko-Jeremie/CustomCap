@@ -12,7 +12,8 @@
     "test:webpack:dev:test:w": "webpack -w --mode=development -c webpack-test.config.js",
     "test:webpack:dev:testSvgCaptcha:w": "webpack -w --mode=development -c webpack-testSvgCaptcha.config.js",
     "test:webpack:dev:testTimeLock:w": "webpack -w --mode=development -c webpack-testTimeLock.config.js",
-    "test:http-server": "http-server -p 62311 -c-1 -o --cors"
+    "test:http-server": "http-server -p 62311 -c-1 -o --cors",
+    "test:testTimeLock:node": "tsx test/testTimeLock.ts"
   },
   "dependencies": {
     "bigint-encoding": "^1.0.1",
