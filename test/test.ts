@@ -7,7 +7,7 @@ async function initTestChallenge() {
     const data = 'testChallenge';
     (window as any).testChallenge = {
         data: data,
-        challenge: await generatePoWPuzzle(data, 3),
+        challenge: await generatePoWPuzzle(data, 1),
     };
 }
 

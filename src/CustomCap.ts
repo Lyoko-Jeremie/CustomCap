@@ -228,8 +228,17 @@ export class CapWidget extends HTMLElement {
     }
 
     async solveChallenges(puzzle: string) {
+        let lastShowProgressTime: number = 0;
         const solvedMessage = await solvePoWPuzzle(puzzle,
             async (progress: number) => {
+
+                const now = Date.now();
+                if (now - lastShowProgressTime < 200) {
+                    // 防止过于频繁的更新， Firefox DOM 事件循环需要更多的时间来处理
+                    return;
+                }
+                lastShowProgressTime = now;
+
                 this.dispatchEvent("progress", {
                     progress: progress,
                 });
@@ -274,7 +283,10 @@ export class CapWidget extends HTMLElement {
                     "credits-link",
                     'https://people.csail.mit.edu/rivest/pubs/RSW96.pdf'
                 )}"`
-        } target="_blank" rel="follow noopener">PoW Verify</a>`;
+        } target="_blank" rel="follow noopener">${this.getI18nText(
+            "credits-string",
+            "PoW Challenge"
+        )}</a>`;
         // this.#div.innerHTML = `
         // <div class="checkbox" part="checkbox"></div>
         // <p part="label">${this.getI18nText(
@@ -496,8 +508,13 @@ export class CapWidget extends HTMLElement {
         return super.dispatchEvent(event);
     }
 
-    reset() {
-        this.stop();
+    async reset() {
+        // stop the solving process if it's running
+        this.stopIt = true;
+        // wait for a moment to ensure the stop is effective
+        await sleep(1);
+        // reset the state
+        this.stopIt = false;
         if (this.#resetTimer) {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
