@@ -7,10 +7,11 @@
         window.CAP_CUSTOM_FETCH = async (url, options) => {
             console.log("Custom fetch called for URL:", url, "with options:", options);
             if (url === "/api/challenge") {
+                await window.initTestChallenge();
+                console.log('(window).testChallenge.challenge', (window).testChallenge.challenge);
                 return new Response(
                     JSON.stringify({
-                        "challenge": "AAAAGRIkW6LEDwTSSc_p06h0X4NVyhcHqWDyZacAAAAZAavXh4qveBUTJi4Pc3D2av3J3hH5MgS_6gAAAANktUAAAAAgbljvJzCRxEvTbuKCUvU_5UnUJyITNu3PHMj4Nc_UBCMAAAAuBfw5s_Oi-G87KMSdmPbdaFIKxJuoDsNPjjihfVvHg8_4cflsmxv1X0BSEfao6AAAABimH8Ue6i9nip-t7yo07O_IRXg8WmQBYe0"
-                        // "challenge": "AAAAGQ8xOUtkpWCZ_VlwvacoIe8jXZ4X9TU9lXcAAAAZCyAVCsbj5lpehpqE_uVx30ed4VVXgzKf3QAAAAQBktUAAAAAIKLgkH4gqXrHQbp9Yse9ms23WN9Bg6sSGwEp7LcwQ_TTAAAALpEOrW6fctpPpbLRU0eqUvl1EsxfHU07GZBmDjZ7gMBH6bB8voQ3mqQ8VWqz7xQAAAAYbsMZzg3KmttKraB-9RySv2SkkYksoDFK"
+                        "challenge": (window).testChallenge.challenge,
                     }),
                     {
                         status: 200,
@@ -19,10 +20,14 @@
                 );
             }
             if (url === "/api/redeem") {
+                console.log("Redeem", options);
+                const solutions = JSON.parse(options.body).solutions;
+                const isOk = solutions === (window).testChallenge.data;
+                // const isOk = false;
                 return new Response(
                     JSON.stringify({
-                        success: true,
-                        token: "1234567890abcdef",
+                        success: isOk,
+                        token: isOk ? "1234567890abcdef" : '',
                         expires: new Date().getTime() + 1000 * 60,
                     }),
                     {
@@ -43,7 +48,7 @@
         data-cap-i18n-verifying-label="正在验证..."
         data-cap-i18n-initial-state="我是人类"
         data-cap-i18n-solved-label="验证通过"
-        data-cap-i18n-error-label="错误："
+        data-cap-i18n-error-label="错误，请重试"
         data-cap-i18n-no-credits-link="1"
 ></cap-widget>
 
