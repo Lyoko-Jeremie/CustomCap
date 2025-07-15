@@ -1,10 +1,80 @@
 import {solvePoWPuzzle} from "./crypto-puzzle/TimeLockPuzzle";
 import {ready} from "libsodium-wrappers";
 
+interface ChallengeInterface {
+    init(): Promise<any>;
+
+    reset(): Promise<any>;
+
+    cleanup(): any;
+
+    solveChallenge(puzzle: string): Promise<string>;
+
+    setWorkersCount(workers: number): void;
+
+    setProgressCallback(cb?: (p: number) => void): void;
+
+    progressCallback?: (p: number) => void;
+    stopIt: boolean;
+    workersCount: number;
+}
+
+class ChallengeTimeLockPuzzlesImpl implements ChallengeInterface {
+    // Time-lock puzzles and timed-release Crypto
+    // https://people.csail.mit.edu/rivest/pubs/RSW96.pdf
+
+    progressCallback?: (p: number) => void;
+    stopIt: boolean = false;
+    workersCount = 0;
+
+    setWorkersCount(workers: number) {
+    }
+
+    setProgressCallback(cb?: (p: number) => void): void {
+        this.progressCallback = cb;
+    }
+
+    cleanup(): any {
+    }
+
+    async init(): Promise<any> {
+        // init libsodium-wrappers
+        await ready;
+    }
+
+    async reset(): Promise<any> {
+    }
+
+    async solveChallenge(puzzle: string): Promise<string> {
+        let lastShowProgressTime: number = 0;
+        const solvedMessage = await solvePoWPuzzle(puzzle,
+            async (progress: number) => {
+
+                const now = Date.now();
+                if (now - lastShowProgressTime < 200) {
+                    // 防止过于频繁的更新， Firefox DOM 事件循环需要更多的时间来处理
+                    return;
+                }
+                lastShowProgressTime = now;
+
+                this.progressCallback?.(progress);
+
+                await sleep(0); // 让出事件循环，避免阻塞
+                if (this.stopIt) {
+                    throw new Error("Solving stopped by user");
+                }
+            }
+        );
+        return solvedMessage;
+    }
+
+}
+
 async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components
 export class CapWidget extends HTMLElement {
     #resetTimer: null | ReturnType<typeof setTimeout> = null;
     token: string | null = null;
@@ -13,6 +83,8 @@ export class CapWidget extends HTMLElement {
     #host?: this;
     #solving = false;
     #eventHandlers: Map<string, any> = new Map();
+
+    challengeImpl: ChallengeInterface;
 
     boundHandleProgress: CallableFunction;
     boundHandleSolve: CallableFunction;
@@ -49,6 +121,8 @@ export class CapWidget extends HTMLElement {
         return r;
     }
 
+    // 一个包含元素需要变更通知的所有属性名称的数组。
+    // https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components/Using_custom_elements#%E5%93%8D%E5%BA%94%E5%B1%9E%E6%80%A7%E5%8F%98%E5%8C%96
     static get observedAttributes() {
         return [
             "onsolve",
@@ -61,7 +135,7 @@ export class CapWidget extends HTMLElement {
         ];
     }
 
-    constructor() {
+    constructor(challengeImpl: ChallengeInterface) {
         super();
         if (this.#eventHandlers) {
             this.#eventHandlers.forEach((handler, eventName) => {
@@ -74,14 +148,17 @@ export class CapWidget extends HTMLElement {
         this.boundHandleSolve = this.handleSolve.bind(this);
         this.boundHandleError = this.handleError.bind(this);
         this.boundHandleReset = this.handleReset.bind(this);
+
+        this.challengeImpl = challengeImpl;
     }
 
     async initialize() {
-        // init libsodium-wrappers
-        await ready;
+        await this.challengeImpl.init();
     }
 
-    attributeChangedCallback(name: string, _: any, value: string) {
+    // 在属性更改、添加、移除或替换时调用。有关此回调的更多详细信息，请参见响应属性变化。
+    // https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components/Using_custom_elements#%E5%93%8D%E5%BA%94%E5%B1%9E%E6%80%A7%E5%8F%98%E5%8C%96
+    attributeChangedCallback(name: string, oldValue: any, newValue: string) {
         if (name.startsWith("on")) {
             const eventName = name.slice(2);
             const oldHandler = this.#eventHandlers.get(name);
@@ -89,7 +166,7 @@ export class CapWidget extends HTMLElement {
                 this.removeEventListener(eventName, oldHandler);
             }
 
-            if (value) {
+            if (newValue) {
                 const handler = (event: any) => {
                     const callback = this.getAttribute(name);
                     if (typeof (window as any)[callback as any] === "function") {
@@ -102,7 +179,7 @@ export class CapWidget extends HTMLElement {
         }
 
         if (name === "data-cap-worker-count") {
-            this.setWorkersCount(parseInt(value));
+            this.setWorkersCount(parseInt(newValue));
         }
 
         if (
@@ -117,9 +194,7 @@ export class CapWidget extends HTMLElement {
         }
     }
 
-    /**
-     * init function ?
-     */
+    // 每当元素添加到文档中时调用。规范建议开发人员尽可能在此回调中实现自定义元素的设定，而不是在构造函数中实现。
     async connectedCallback() {
         this.#host = this;
         this.#shadow = this.attachShadow({mode: "open"});
@@ -166,13 +241,21 @@ export class CapWidget extends HTMLElement {
 
                 const t1 = Date.now();
 
-                const {challenge} = await (
+                const respChallenge: {
+                    success: boolean;
+                    challenge: string;
+                } = await (
                     await this.capFetch(`${apiEndpoint}/challenge`, {
                         method: "GET",
                     })
                 ).json();
 
-                let challenges: string = challenge;
+                if (!respChallenge.success) {
+                    this.error("Failed to get challenge");
+                    throw new Error("Failed to get challenge");
+                }
+
+                let challenges: string = respChallenge.challenge;
 
                 const solutions = await this.solveChallenges(challenges);
 
@@ -187,6 +270,7 @@ export class CapWidget extends HTMLElement {
                         headers: {"Content-Type": "application/json"},
                     })
                 ).json();
+                console.log('resp', resp);
 
                 this.dispatchEvent("progress", {progress: 100});
 
@@ -237,31 +321,14 @@ export class CapWidget extends HTMLElement {
     }
 
     async solveChallenges(puzzle: string) {
-        let lastShowProgressTime: number = 0;
-        const solvedMessage = await solvePoWPuzzle(puzzle,
-            async (progress: number) => {
-
-                const now = Date.now();
-                if (now - lastShowProgressTime < 200) {
-                    // 防止过于频繁的更新， Firefox DOM 事件循环需要更多的时间来处理
-                    return;
-                }
-                lastShowProgressTime = now;
-
-                this.dispatchEvent("progress", {
-                    progress: progress,
-                });
-                await sleep(0); // 让出事件循环，避免阻塞
-                if (this.stopIt) {
-                    throw new Error("Solving stopped by user");
-                }
-            }
-        );
-        return solvedMessage;
+        this.challengeImpl.setProgressCallback((p) => {
+            this.dispatchEvent("progress", {progress: p});
+        });
+        return await this.challengeImpl.solveChallenge(puzzle);
     }
 
     setWorkersCount(workers: number) {
-        // empty
+        this.challengeImpl.setWorkersCount(workers);
     }
 
     createUI() {
@@ -530,6 +597,7 @@ export class CapWidget extends HTMLElement {
         }
         this.dispatchEvent("reset");
         this.token = null;
+        await this.challengeImpl.reset();
         const fieldName =
             this.getAttribute("data-cap-hidden-field-name") || "cap-token";
         if (this.querySelector(`input[name='${fieldName}']`)) {
@@ -541,6 +609,7 @@ export class CapWidget extends HTMLElement {
         return this.token;
     }
 
+    // 每当元素从文档中移除时调用。
     disconnectedCallback() {
         this.removeEventListener("progress", this.boundHandleProgress as any);
         this.removeEventListener("solve", this.boundHandleSolve as any);
@@ -556,7 +625,7 @@ export class CapWidget extends HTMLElement {
             this.#shadow.innerHTML = "";
         }
 
-        this.reset();
+        this.reset().catch(console.error);
         this.cleanup();
     }
 
@@ -565,12 +634,24 @@ export class CapWidget extends HTMLElement {
             clearTimeout(this.#resetTimer);
             this.#resetTimer = null;
         }
+        this.challengeImpl.cleanup();
     }
 
-    stopIt = false;
+    _stopIt = false;
+
+    set stopIt(value: boolean) {
+        this._stopIt = value;
+        this.challengeImpl.stopIt = value;
+    }
 
     stop() {
         this.stopIt = true;
+    }
+}
+
+export class CapWidgetTimeLockPuzzles extends CapWidget {
+    constructor() {
+        super(new ChallengeTimeLockPuzzlesImpl());
     }
 }
 
@@ -618,7 +699,7 @@ class Cap {
 (window as any).Cap = Cap;
 
 if (!customElements.get("cap-widget") && !(window as any)?.CAP_DONT_SKIP_REDEFINE) {
-    customElements.define("cap-widget", CapWidget);
+    customElements.define("cap-widget", CapWidgetTimeLockPuzzles);
 } else {
     console.warn(
         "[CustomCap] the cap-widget element has already been defined, skipping re-defining it.\nto prevent this, set window.CAP_DONT_SKIP_REDEFINE to true"
